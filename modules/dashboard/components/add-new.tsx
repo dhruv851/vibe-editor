@@ -1,38 +1,17 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+// import { createPlayground } from "@/features/playground/actions";
 import { Plus } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import TemplateSelectingModal from "./template-slecting-modal";
 import TemplateSelectionModal from "./template-slecting-modal";
-import { createPlayground } from "../actions";
-import { TemplateType } from "../types";
 
 const AddNewButton = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<{
-    title: string;
-    template: TemplateType;
-    description?: string;
-  } | null>(null);
-  const router = useRouter();
-
-  const handleSubmit = async (data:{
-      title: string;
-    template: TemplateType;
-    description?: string;
-  })=>{
-    setSelectedTemplate(data)
-
-    const res = await createPlayground(data);
-    toast.success("Playground Created successfully"
-      
-    )
-    setIsModalOpen(false)
-    router.push(`/playground/${res?.id}`)
-  }
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
     <>
@@ -76,10 +55,14 @@ const AddNewButton = () => {
       <TemplateSelectionModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSubmit={handleSubmit}
+        onSubmit={() => {}}
       />
+      
+
+    
     </>
   );
 };
 
 export default AddNewButton;
+
