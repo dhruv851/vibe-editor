@@ -1,3 +1,11 @@
+export type TemplateType =
+  | "REACT"
+  | "NEXTJS"
+  | "VANILLAJS"
+  | "VUEJS"
+  | "ANGULAR"
+  | "NODEJS";
+
 export interface User {
   id: string;
   name: string;

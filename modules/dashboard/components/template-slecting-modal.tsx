@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
+import { TemplateType } from "../types";
 
 // TemplateSelectionModal.tsx
 type TemplateSelectionModalProps = {
@@ -33,7 +34,7 @@ type TemplateSelectionModalProps = {
   onClose: () => void;
   onSubmit: (data: {
     title: string;
-    template: "REACT" | "NEXTJS" | "EXPRESS" | "VUE" | "HONO" | "ANGULAR";
+    template: TemplateType;
     description?: string;
   }) => void;
 };
@@ -172,16 +173,14 @@ const TemplateSelectionModal = ({
 
   const handleCreateProject = () => {
     if (selectedTemplate) {
-      const templateMap: Record<
-        string,
-        "REACT" | "NEXTJS" | "EXPRESS" | "VUE" | "HONO" | "ANGULAR"
-      > = {
+      const templateMap: Record<string, TemplateType> = {
         react: "REACT",
         nextjs: "NEXTJS",
-        express: "EXPRESS",
-        vue: "VUE",
-        hono: "HONO",
+        express: "NODEJS", // Express maps to Node.js
+        vue: "VUEJS", // Vue maps to VUEJS
+        hono: "NODEJS", // Hono maps to Node.js
         angular: "ANGULAR",
+        vanilla: "VANILLAJS", // VanillaJS support
       };
 
       const template = templates.find((t) => t.id === selectedTemplate);
@@ -302,7 +301,6 @@ const TemplateSelectionModal = ({
                           <div
                             className="relative w-16 h-16 flex-shrink-0 flex items-center justify-center rounded-full"
                             style={{ backgroundColor: `${template.color}15` }}
-
                           >
                             <Image
                               src={template.icon || "/placeholder.svg"}
