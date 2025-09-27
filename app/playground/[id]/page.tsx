@@ -5,7 +5,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -17,6 +21,8 @@ import PlaygroundEditor from "@/modules/playground/components/playground-editor"
 import { TemplateFileTree } from "@/modules/playground/components/playground-explorer";
 import { useFileExplorer } from "@/modules/playground/hooks/useFileExplorer";
 import { usePlayground } from "@/modules/playground/hooks/usePlayground";
+import WebContainerPreview from "@/modules/webcontainers/components/webcontainer-preview";
+import { useWebContainer } from "@/modules/webcontainers/hooks/useWebContainer";
 import { Button } from "@/vibecode-starters/vite-shadcn/src/components/ui/button";
 import { TemplateFile } from "@prisma/client";
 import { DropdownMenu, Separator } from "@radix-ui/react-dropdown-menu";
@@ -26,7 +32,8 @@ import React, { useEffect, useState } from "react";
 
 const MainPlaygroundPage = () => {
   const { id } = useParams<{ id: string }>();
-  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const [isPreviewVisible, setIsPreviewVisible] = useState(true); // Changed to true by default
+  console.log("Preview visible:", isPreviewVisible); // Debug log
   const {
     playgroundData,
     templateData,
@@ -46,6 +53,22 @@ const MainPlaygroundPage = () => {
     setPlaygroundId,
     setOpenFiles,
   } = useFileExplorer();
+
+  const {
+    serverUrl,
+    isLoading: containerLoading,
+    error: containerError,
+    instance,
+    writeFileSync,
+  } = useWebContainer({ templateData });
+
+  console.log("WebContainer state:", {
+    serverUrl,
+    containerLoading,
+    containerError,
+    instance: !!instance,
+    templateData: !!templateData,
+  }); // Debug log
 
   useEffect(() => {
     setPlaygroundId(id);
@@ -139,7 +162,15 @@ const MainPlaygroundPage = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
-                    onClick={() => setIsPreviewVisible(!isPreviewVisible)}
+                    onClick={() => {
+                      console.log(
+                        "Toggling preview from:",
+                        isPreviewVisible,
+                        "to:",
+                        !isPreviewVisible
+                      );
+                      setIsPreviewVisible(!isPreviewVisible);
+                    }}
                   >
                     {isPreviewVisible ? "Hide" : "Show"} Preview
                   </DropdownMenuItem>
@@ -215,6 +246,56 @@ const MainPlaygroundPage = () => {
                       onContentChange={() => {}}
                     />
                   </ResizablePanel>
+                  {isPreviewVisible && (
+                    <>
+                      <ResizableHandle />
+                      <ResizablePanel defaultSize={50}>
+                        <div className="h-full border-l bg-background">
+                          <div className="p-2 border-b">
+                            <h3 className="text-sm font-medium">Preview</h3>
+                            <p className="text-xs text-muted-foreground">
+                              {containerLoading && "Loading WebContainer..."}
+                              {containerError && `Error: ${containerError}`}
+                              {!containerLoading &&
+                                !containerError &&
+                                instance &&
+                                "Ready"}
+                            </p>
+                          </div>
+                          {!templateData ? (
+                            <div className="flex items-center justify-center h-full text-muted-foreground">
+                              <p>No template data available</p>
+                            </div>
+                          ) : containerError ? (
+                            <div className="flex flex-col items-center justify-center h-full text-destructive">
+                              <p className="mb-2">
+                                Failed to initialize WebContainer
+                              </p>
+                              <p className="text-sm">{containerError}</p>
+                            </div>
+                          ) : containerLoading ? (
+                            <div className="flex items-center justify-center h-full">
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <div className="animate-spin h-4 w-4 border border-current border-t-transparent rounded-full" />
+                                <span>Loading WebContainer...</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <WebContainerPreview
+                              // @ts-ignore
+                              templateData={templateData}
+                              instance={instance}
+                              writeFileSync={writeFileSync}
+                              isLoading={containerLoading}
+                              error={containerError}
+                              serverUrl={serverUrl || ""}
+                              forceResetup={false}
+                            />
+                          )}
+                        </div>
+                      </ResizablePanel>
+                    </>
+                  )}
                 </ResizablePanelGroup>
               </div>
             </div>
