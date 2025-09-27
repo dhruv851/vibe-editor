@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import { ThemeProvider } from "@/components/providers/theme-providers";
@@ -27,9 +28,10 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await auth();
+
   return (
     <SessionProvider session={session}>
-      <html lang="en" className="dark" style={{ colorScheme: "dark" }}>
+      <html lang="en">
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
@@ -41,9 +43,8 @@ export default async function RootLayout({
           >
             <div className="flex flex-col min-h-screen">
               <Toaster />
-              <div className="flex-1"></div>
+              <div className="flex-1">{children}</div>
             </div>
-            {children}
           </ThemeProvider>
         </body>
       </html>
