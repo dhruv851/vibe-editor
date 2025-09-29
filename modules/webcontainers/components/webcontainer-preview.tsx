@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { transformToWebContainerFormat } from "../hooks/transformer";
 import { CheckCircle, Loader2, XCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
@@ -36,12 +36,31 @@ const WebContainerPreview = ({
     ready: false,
   });
   const [currentStep, setCurrentStep] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
   const totalSteps = 4;
   const [setupError, setSetupError] = useState<string | null>(null);
   const [isSetupComplete, setIsSetupComplete] = useState(false);
   const [isSetupInProgress, setIsSetupInProgress] = useState(false);
 
   const terminalRef = useRef<any>(null);
+  
+  // Force refresh function for static files
+  const forceRefresh = useCallback(() => {
+    console.log("🔄 Force refreshing preview...");
+    setRefreshKey(prev => prev + 1);
+  }, []);
+
+  // Expose force refresh to parent component
+  useEffect(() => {
+    if (writeFileSync && instance) {
+      // Store original writeFileSync
+      const originalWriteFileSync = writeFileSync;
+      
+      // Override writeFileSync to trigger refresh for HTML files
+      (window as any).forceRefreshPreview = forceRefresh;
+    }
+  }, [writeFileSync, instance, forceRefresh]);
+
   // Reset setup state when forceResetup changes
   useEffect(() => {
     if (forceResetup) {
@@ -192,7 +211,35 @@ const WebContainerPreview = ({
           );
         }
 
-        const startProcess = await instance.spawn("npm", ["run", "start"]);
+        // Try to determine the correct start command based on package.json
+        let startCommand = "start";
+        try {
+          const packageJsonContent = await instance.fs.readFile(
+            "package.json",
+            "utf8"
+          );
+          const packageJson = JSON.parse(packageJsonContent);
+
+          if (packageJson.scripts?.dev) {
+            startCommand = "dev";
+            if (terminalRef.current?.writeToTerminal) {
+              terminalRef.current.writeToTerminal(
+                "📦 Using 'npm run dev' command\r\n"
+              );
+            }
+          } else if (packageJson.scripts?.start) {
+            startCommand = "start";
+            if (terminalRef.current?.writeToTerminal) {
+              terminalRef.current.writeToTerminal(
+                "📦 Using 'npm run start' command\r\n"
+              );
+            }
+          }
+        } catch (error) {
+          console.warn("Could not read package.json, defaulting to 'start'");
+        }
+
+        const startProcess = await instance.spawn("npm", ["run", startCommand]);
 
         instance.on("server-ready", (port: number, url: string) => {
           if (terminalRef.current?.writeToTerminal) {
@@ -200,6 +247,7 @@ const WebContainerPreview = ({
               `🌐 Server ready at ${url}\r\n`
             );
           }
+          console.log(`🌐 Development server ready at: ${url}`);
           setPreviewUrl(url);
           setLoadingState((prev) => ({
             ...prev,
