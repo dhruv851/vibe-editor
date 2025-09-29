@@ -32,10 +32,12 @@ export const useAISuggestions = (): UseAISuggestionsReturn => {
   const fetchSuggestion = useCallback(async (type: string, editor: any) => {
     setState((currentState) => {
       if (!currentState.isEnabled) {
+        console.log("AI suggestions disabled");
         return currentState;
       }
 
       if (!editor) {
+        console.log("No editor available");
         return currentState;
       }
 
@@ -43,6 +45,7 @@ export const useAISuggestions = (): UseAISuggestionsReturn => {
       const cursorPosition = editor.getPosition();
 
       if (!model || !cursorPosition) {
+        console.log("No model or cursor position");
         return currentState;
       }
 
@@ -57,19 +60,34 @@ export const useAISuggestions = (): UseAISuggestionsReturn => {
             suggestionType: type,
           };
 
+          console.log("Fetching AI suggestion with payload:", {
+            contentLength: payload.fileContent.length,
+            cursorLine: payload.cursorLine,
+            cursorColumn: payload.cursorColumn,
+            suggestionType: payload.suggestionType,
+          });
+
           const response = await fetch("/api/code-completion", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
           });
+
           if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`API error: ${response.status}`, errorText);
             throw new Error(`API responded with status ${response.status}`);
           }
 
           const data = await response.json();
+          console.log("AI suggestion response:", data);
 
           if (data.suggestion) {
             const suggestionText = data.suggestion.trim();
+            console.log(
+              "Setting suggestion:",
+              suggestionText.substring(0, 100) + "..."
+            );
             setState((prev) => ({
               ...prev,
               suggestion: suggestionText,
@@ -80,7 +98,7 @@ export const useAISuggestions = (): UseAISuggestionsReturn => {
               isLoading: false,
             }));
           } else {
-            console.warn("No suggestion received from API.");
+            console.warn("No suggestion received from API:", data);
             setState((prev) => ({ ...prev, isLoading: false }));
           }
         } catch (error) {
@@ -93,44 +111,42 @@ export const useAISuggestions = (): UseAISuggestionsReturn => {
     });
   }, []);
 
-  const acceptSuggestion = useCallback(() => {
-    (editor: any, monaco: any) => {
-      setState((currentState) => {
-        if (
-          !currentState.suggestion ||
-          !currentState.position ||
-          !editor ||
-          !monaco
-        ) {
-          return currentState;
-        }
+  const acceptSuggestion = useCallback((editor: any, monaco: any) => {
+    setState((currentState) => {
+      if (
+        !currentState.suggestion ||
+        !currentState.position ||
+        !editor ||
+        !monaco
+      ) {
+        return currentState;
+      }
 
-        const { line, column } = currentState.position;
-        const sanitizedSuggestion = currentState.suggestion.replace(
-          /^\d+:\s*/gm,
-          ""
-        );
+      const { line, column } = currentState.position;
+      const sanitizedSuggestion = currentState.suggestion.replace(
+        /^\d+:\s*/gm,
+        ""
+      );
 
-        editor.executeEdits("", [
-          {
-            range: new monaco.Range(line, column, line, column),
-            text: sanitizedSuggestion,
-            forceMoveMarkers: true,
-          },
-        ]);
+      editor.executeEdits("", [
+        {
+          range: new monaco.Range(line, column, line, column),
+          text: sanitizedSuggestion,
+          forceMoveMarkers: true,
+        },
+      ]);
 
-        if (editor && currentState.decoration.length > 0) {
-          editor.deltaDecorations(currentState.decoration, []);
-        }
+      if (editor && currentState.decoration.length > 0) {
+        editor.deltaDecorations(currentState.decoration, []);
+      }
 
-        return {
-          ...currentState,
-          suggestion: null,
-          position: null,
-          decoration: [],
-        };
-      });
-    };
+      return {
+        ...currentState,
+        suggestion: null,
+        position: null,
+        decoration: [],
+      };
+    });
   }, []);
 
   const rejectSuggestion = useCallback((editor: any) => {

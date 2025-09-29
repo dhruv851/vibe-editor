@@ -138,42 +138,56 @@ Generate suggestion:`;
 
 async function generateSuggestion(prompt: string): Promise<string> {
   try {
-    // const response = await fetch("http://localhost:11434/api/generate", {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify({
-    //     model: "codellama:latest",
-    //     prompt,
-    //     stream: false,
-    //     option: {
-    //       temperature: 0.7,
-    //       max_tokens: 300,
-    //     },
-    //   }),
-    // });
+    // Check if OpenAI API key is available
+    if (!process.env.OPENAI_API_KEY) {
+      console.error("OPENAI_API_KEY not found in environment variables");
+      return "// AI suggestion unavailable - API key missing";
+    }
 
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    // Use the correct OpenAI API endpoint for chat completions
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini", // swap if you prefer another model
-        input: prompt, // same idea as your `prompt`
+        model: "gpt-4o-mini", // or "gpt-3.5-turbo" for cheaper option
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a helpful coding assistant. Generate only the code completion without explanations or comments unless specifically requested. Focus on providing syntactically correct and contextually appropriate code.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
         temperature: 0.7,
-        max_output_tokens: 300, // like your max_tokens
-        stream: false            // default; omit
-
+        max_tokens: 300,
+        stream: false,
       }),
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(
+        `OpenAI API error: ${response.status} ${response.statusText}`,
+        errorText
+      );
       throw new Error(`AI service error: ${response.statusText}`);
     }
 
     const data = await response.json();
-    let suggestion = data.response;
+
+    // Extract suggestion from OpenAI response
+    let suggestion = data.choices?.[0]?.message?.content;
+
+    if (!suggestion) {
+      console.error("No suggestion content in OpenAI response:", data);
+      return "// AI suggestion unavailable - no content returned";
+    }
 
     // Clean up the suggestion
     if (suggestion.includes("```")) {
@@ -181,7 +195,7 @@ async function generateSuggestion(prompt: string): Promise<string> {
       suggestion = codeMatch ? codeMatch[1].trim() : suggestion;
     }
 
-    return suggestion;
+    return suggestion.trim();
   } catch (error) {
     console.error("AI generation error:", error);
     return "// AI suggestion unavailable";
