@@ -21,6 +21,7 @@ import {
 import LoadingStep from "@/modules/playground/components/loader";
 import PlaygroundEditor from "@/modules/playground/components/playground-editor";
 import { TemplateFileTree } from "@/modules/playground/components/playground-explorer";
+import ToggleAI from "@/modules/playground/components/toggle-ai";
 import { useFileExplorer } from "@/modules/playground/hooks/useFileExplorer";
 import { usePlayground } from "@/modules/playground/hooks/usePlayground";
 import { findFilePath } from "@/modules/playground/lib";
@@ -389,7 +390,7 @@ const MainPlaygroundPage = () => {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => handleSaveAll() }
+                    onClick={() => handleSaveAll()}
                     disabled={!hasUnsavedChanges}
                   >
                     <Save className="h-4 w-4" /> All
@@ -398,14 +399,13 @@ const MainPlaygroundPage = () => {
                 <TooltipContent>Save All (Ctrl+Shift+S)</TooltipContent>
               </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant={"default"} size={"icon"}>
-                    <Bot className="size-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>AI Assistant</TooltipContent>
-              </Tooltip>
+        
+
+              <ToggleAI
+                isEnabled={true}
+                onToggle={()=>{}}
+                suggestionLoading={false}
+              />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
