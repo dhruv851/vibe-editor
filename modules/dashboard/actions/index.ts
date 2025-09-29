@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { currentUser } from "@/modules/auth/actions";
 import { revalidatePath } from "next/cache";
+import { TemplateType } from "../types";
 
 export const toggleStarMarked = async (
   playgroundId: string,
@@ -45,6 +46,8 @@ export const toggleStarMarked = async (
 export const getAllPlaygroundForUser = async () => {
   const user = await currentUser();
 
+  console.log("Current user:", user?.id);
+
   try {
     const playground = await db.playground.findMany({
       where: {
@@ -63,15 +66,17 @@ export const getAllPlaygroundForUser = async () => {
       },
     });
 
+    console.log("Found playgrounds:", playground.length);
     return playground;
   } catch (error) {
-    console.log(error);
+    console.log("Database error:", error);
+    throw error;
   }
 };
 
 export const createPlayground = async (data: {
   title: string;
-  template: "REACT" | "NEXTJS" | "EXPRESS" | "VUE" | "HONO" | "ANGULAR";
+  template: TemplateType;
   description?: string;
 }) => {
   const user = await currentUser();
@@ -88,9 +93,13 @@ export const createPlayground = async (data: {
       },
     });
 
+    // Revalidate the dashboard page to show the new project
+    revalidatePath("/dashboard");
+
     return playground;
   } catch (error) {
-    console.log(error);
+    console.error("Error creating playground:", error);
+    throw error;
   }
 };
 

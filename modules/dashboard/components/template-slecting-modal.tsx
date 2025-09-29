@@ -176,11 +176,10 @@ const TemplateSelectionModal = ({
       const templateMap: Record<string, TemplateType> = {
         react: "REACT",
         nextjs: "NEXTJS",
-        express: "NODEJS", // Express maps to Node.js
-        vue: "VUEJS", // Vue maps to VUEJS
-        hono: "NODEJS", // Hono maps to Node.js
+        express: "EXPRESS", // Express maps to EXPRESS in DB
+        vue: "VUE", // Vue maps to VUE in DB
+        hono: "HONO", // Hono maps to HONO in DB
         angular: "ANGULAR",
-        vanilla: "VANILLAJS", // VanillaJS support
       };
 
       const template = templates.find((t) => t.id === selectedTemplate);
