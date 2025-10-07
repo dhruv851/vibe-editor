@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY pnpm-lock.yaml ./
+COPY pnpm-lock.yaml* ./
 
 # Install pnpm
 RUN npm install -g pnpm
