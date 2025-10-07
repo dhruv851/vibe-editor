@@ -1,0 +1,11 @@
+{
+  "build": {
+    "builder": "@vercel/next"
+  },
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/"
+    }
+  ]
+}
