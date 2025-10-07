@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 
 import LoadingStep from "@/modules/playground/components/loader";
-import {PlaygroundEditor} from "@/modules/playground/components/playground-editor";
+import { PlaygroundEditor } from "@/modules/playground/components/playground-editor";
 
 import { TemplateFileTree } from "@/modules/playground/components/playground-explorer";
 import ToggleAI from "@/modules/playground/components/toggle-ai";
@@ -89,6 +89,82 @@ const MainPlaygroundPage = () => {
   } = useWebContainer({ templateData });
 
   const lastSyncedContent = useRef<Map<string, string>>(new Map());
+
+  // Real-time sync effect - automatically sync changes to WebContainer
+  useEffect(() => {
+    if (!activeFileId || !writeFileSync || !instance || !templateData) {
+      console.log("🚫 Auto-sync skipped:", {
+        activeFileId: !!activeFileId,
+        writeFileSync: !!writeFileSync,
+        instance: !!instance,
+        templateData: !!templateData,
+      });
+      return;
+    }
+
+    const activeFile = openFiles.find((f) => f.id === activeFileId);
+    if (!activeFile || !activeFile.hasUnsavedChanges) {
+      console.log("🚫 Auto-sync skipped - no changes:", {
+        activeFile: !!activeFile,
+        hasUnsavedChanges: activeFile?.hasUnsavedChanges,
+      });
+      return;
+    }
+
+    console.log("⏱️ Auto-sync timer started for:", activeFile.filename);
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const filePath = findFilePath(activeFile, templateData);
+        if (!filePath) {
+          console.error(
+            "❌ Could not find file path for:",
+            activeFile.filename
+          );
+          return;
+        }
+
+        // Only sync if content actually changed
+        const lastContent = lastSyncedContent.current.get(activeFileId);
+        if (lastContent === activeFile.content) {
+          console.log("🔄 Content unchanged, skipping sync for:", filePath);
+          return;
+        }
+
+        console.log(`🔄 Auto-syncing: ${filePath}`);
+        console.log(
+          `📝 Content preview:`,
+          activeFile.content.substring(0, 100) + "..."
+        );
+
+        // Write to WebContainer for real-time preview
+        await writeFileSync(filePath, activeFile.content);
+        await instance.fs.writeFile(filePath, activeFile.content);
+
+        // Update tracking
+        lastSyncedContent.current.set(activeFileId, activeFile.content);
+
+        console.log(`✅ Auto-sync complete: ${filePath}`);
+
+        // Force a page refresh for static HTML files
+        if (filePath.endsWith(".html")) {
+          console.log("🔄 HTML file detected, forcing preview refresh");
+          setTimeout(() => {
+            if ((window as any).forceRefreshPreview) {
+              (window as any).forceRefreshPreview();
+            }
+          }, 500); // Small delay to ensure file is written
+        }
+      } catch (error) {
+        console.error("❌ Auto-sync error:", error);
+      }
+    }, 1000); // Auto-sync after 1 second of inactivity
+
+    return () => {
+      console.log("🧹 Cleaning up auto-sync timer for:", activeFile.filename);
+      clearTimeout(timeoutId);
+    };
+  }, [activeFileId, openFiles, writeFileSync, instance, templateData]);
 
   useEffect(() => {
     setPlaygroundId(id);
@@ -217,11 +293,20 @@ const MainPlaygroundPage = () => {
 
         // Sync with WebContainer
         if (writeFileSync) {
+          console.log(`🔄 Syncing file: ${filePath}`);
+          console.log(`📄 Content length: ${fileToSave.content.length}`);
+
           await writeFileSync(filePath, fileToSave.content);
           lastSyncedContent.current.set(fileToSave.id, fileToSave.content);
+
           if (instance && instance.fs) {
             await instance.fs.writeFile(filePath, fileToSave.content);
+            console.log(`✅ File written to WebContainer: ${filePath}`);
+          } else {
+            console.warn("❌ WebContainer instance not available");
           }
+        } else {
+          console.warn("❌ writeFileSync function not available");
         }
 
         const newTemplateData = await saveTemplateData(updatedTemplateData);
